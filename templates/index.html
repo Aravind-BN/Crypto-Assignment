@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apple Pay Cryptography Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .payment-card {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+        }
+
+        .apple-pay-logo {
+            font-size: 2em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .payment-form {
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 0.9em;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .pay-button {
+            width: 100%;
+            padding: 14px;
+            background: #555;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .pay-button:hover {
+            background: #333;
+        }
+
+        .pay-button:active {
+            background: #222;
+        }
+
+        .pay-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .crypto-display {
+            background: #fafafa;
+            border-radius: 4px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+            border: 1px solid #ddd;
+        }
+
+        .crypto-display.active {
+            display: block;
+        }
+
+        .crypto-section {
+            background: white;
+            border-radius: 4px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+        }
+
+        .crypto-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .crypto-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 8px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            background: #777;
+            color: white;
+            border-radius: 3px;
+            font-size: 0.7em;
+            font-weight: 500;
+            margin-left: 10px;
+        }
+
+        .badge.post-quantum {
+            background: #555;
+        }
+
+        .crypto-detail {
+            margin-bottom: 12px;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #555;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .detail-value {
+            color: #333;
+            font-family: 'Courier New', monospace;
+            background: #f0f0f0;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .success-message {
+            background: #e8f5e9;
+            border: 1px solid #c8e6c9;
+            color: #2e7d32;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .transaction-info {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            color: #333;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .info-label {
+            font-weight: 600;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #666;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .payment-card {
+                padding: 25px;
+            }
+        }
+
+        .algorithm-flow {
+            background: white;
+            border-radius: 4px;
+            padding: 20px;
+            margin-top: 15px;
+            border: 1px solid #ddd;
+        }
+
+        .flow-step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 12px;
+            background: #fafafa;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .flow-step:last-child {
+            margin-bottom: 0;
+        }
+
+        .step-number {
+            width: 30px;
+            height: 30px;
+            background: #555;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .step-description {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .decode-section {
+            background: #fff9e6;
+            border: 1px solid #ffe066;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .decode-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+
+        .decode-button {
+            background: #666;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        .decode-button:hover {
+            background: #444;
+        }
+
+        .decode-result {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 12px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            display: none;
+        }
+
+        .decode-result.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="payment-card">
+            <div class="header">
+                <div class="apple-pay-logo">🍎 Apple Pay</div>
+                <div class="subtitle">Cryptography Demonstration - CTG Assignment</div>
+            </div>
+
+            <div class="payment-form">
+                <div class="grid">
+                    <div class="form-group">
+                        <label for="amount">Amount ($)</label>
+                        <input type="number" id="amount" step="0.01" value="100.00" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="merchant">Merchant Name</label>
+                        <input type="text" id="merchant" value="Apple Store" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="card">Select Card</label>
+                    <select id="card">
+                        <option value="1234">Visa •••• 1234</option>
+                        <option value="5678">Mastercard •••• 5678</option>
+                        <option value="9012">Amex •••• 9012</option>
+                    </select>
+                </div>
+
+                <button class="pay-button" onclick="processPayment()">
+                    Pay with Apple Pay
+                </button>
+            </div>
+
+            <div id="cryptoDisplay" class="crypto-display">
+                <!-- Results will be displayed here -->
+            </div>
+        </div>
+
+        <div class="payment-card" style="background: #fafafa; border: 1px solid #ddd;">
+            <h3 style="margin-bottom: 20px; color: #333;">How It Works</h3>
+            <div class="algorithm-flow">
+                <div class="flow-step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <div class="step-title">CRYSTALS-Kyber Key Exchange</div>
+                        <div class="step-description">Post-quantum secure key encapsulation establishes a shared secret between your device and the merchant terminal</div>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <div class="step-title">ChaCha20-Poly1305 Encryption</div>
+                        <div class="step-description">Transaction data is encrypted using authenticated encryption, ensuring confidentiality and integrity</div>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <div class="step-title">Secure Transmission</div>
+                        <div class="step-description">Encrypted payment data is sent to the merchant and securely decrypted for processing</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function processPayment() {
+            const button = document.querySelector('.pay-button');
+            const display = document.getElementById('cryptoDisplay');
+            
+            // Get form values
+            const amount = document.getElementById('amount').value;
+            const merchant = document.getElementById('merchant').value;
+            const cardLast4 = document.getElementById('card').value;
+
+            // Disable button and show loading
+            button.disabled = true;
+            button.textContent = 'Processing...';
+            
+            display.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <div>Encrypting transaction data...</div>
+                </div>
+            `;
+            display.classList.add('active');
+
+            try {
+                const response = await fetch('/api/payment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        amount: amount,
+                        merchant: merchant,
+                        card_last4: cardLast4
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayResults(data);
+                } else {
+                    display.innerHTML = `
+                        <div style="color: #d32f2f; padding: 20px; text-align: center;">
+                            <strong>Error:</strong> ${data.error}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                display.innerHTML = `
+                    <div style="color: #d32f2f; padding: 20px; text-align: center;">
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Pay with Apple Pay';
+            }
+        }
+
+        function displayResults(data) {
+            const display = document.getElementById('cryptoDisplay');
+            const tx = data.transaction;
+            const crypto = data.cryptography;
+
+            display.innerHTML = `
+                <div class="success-message">
+                    ✅ Payment Successfully Encrypted and Processed
+                </div>
+
+                <div class="transaction-info">
+                    <h4 style="margin-bottom: 15px; color: #004085;">Transaction Details</h4>
+                    <div class="info-row">
+                        <span class="info-label">Transaction ID:</span>
+                        <span>${tx.transaction_id}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Amount:</span>
+                        <span>$${tx.amount}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Merchant:</span>
+                        <span>${tx.merchant}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Card:</span>
+                        <span>•••• ${tx.card_last4}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Timestamp:</span>
+                        <span>${new Date(tx.timestamp).toLocaleString()}</span>
+                    </div>
+                </div>
+
+                <div class="crypto-section">
+                    <div class="crypto-title">
+                        <span>CRYSTALS-Kyber</span>
+                        <span class="badge post-quantum">Post-Quantum</span>
+                    </div>
+                    
+                    <div class="crypto-detail">
+                        <div class="detail-label">Purpose</div>
+                        <div class="detail-value">${crypto.kyber.purpose}</div>
+                    </div>
+
+                    <div class="crypto-detail">
+                        <div class="detail-label">Description</div>
+                        <div class="detail-value">${crypto.kyber.description}</div>
+                    </div>
+
+                    <div class="crypto-detail">
+                        <div class="detail-label">Verification Status</div>
+                        <div class="detail-value">✅ ${crypto.kyber.verification}</div>
+                    </div>
+
+                    <div class="grid">
+                        <div class="crypto-detail">
+                            <div class="detail-label">Ciphertext Length</div>
+                            <div class="detail-value">${crypto.kyber.ciphertext_length} bytes</div>
+                        </div>
+                        <div class="crypto-detail">
+                            <div class="detail-label">Shared Secret Length</div>
+                            <div class="detail-value">${crypto.kyber.shared_secret_length} bytes</div>
+                        </div>
+                    </div>
+
+                    <div class="crypto-detail">
+                        <div class="detail-label">Ciphertext Preview (First 32 bytes)</div>
+                        <div class="detail-value">${crypto.kyber.ciphertext_preview}</div>
+                    </div>
+
+                    <div class="crypto-detail">
+                        <div class="detail-label">Shared Secret Preview (First 16 bytes)</div>
+                        <div class="detail-value">${crypto.kyber.shared_secret_preview}</div>
+                    </div>
+                </div>
+
+                <div class="crypto-section">
+                    <div class="crypto-title">
+                        <span>ChaCha20-Poly1305</span>
+                        <span class="badge">AEAD</span>
+                    </div>
+                    
+                    <div class="crypto-detail">
+                        <div class="detail-label">Purpose</div>
+                        <div class="detail-value">${crypto.chacha20_poly1305.purpose}</div>
+                    </div>
+
+                    <div class="crypto-detail">
+                        <div class="detail-label">Description</div>
+                        <div class="detail-value">${crypto.chacha20_poly1305.description}</div>
+                    </div>
+
+                    <div class="crypto-detail">
+                        <div class="detail-label">Plaintext (Original Transaction Data)</div>
+                        <div class="detail-value">${crypto.chacha20_poly1305.plaintext}</div>
+                    </div>
+
+                    <div class="crypto-detail">
+                        <div class="detail-label">Nonce (12 bytes)</div>
+                        <div class="detail-value">${crypto.chacha20_poly1305.nonce}</div>
+                    </div>
+
+                    <div class="crypto-detail">
+                        <div class="detail-label">Encrypted Ciphertext Preview (First 32 bytes)</div>
+                        <div class="detail-value">${crypto.chacha20_poly1305.ciphertext_preview}</div>
+                    </div>
+
+                    <div class="crypto-detail">
+                        <div class="detail-label">Ciphertext Length</div>
+                        <div class="detail-value">${crypto.chacha20_poly1305.ciphertext_length} bytes (includes 16-byte authentication tag)</div>
+                    </div>
+
+                    <div class="crypto-detail">
+                        <div class="detail-label">Authentication Status</div>
+                        <div class="detail-value">✅ ${crypto.chacha20_poly1305.authenticated ? 'Verified' : 'Failed'}</div>
+                    </div>
+
+                    <div class="crypto-detail">
+                        <div class="detail-label">Decrypted Data (Verification)</div>
+                        <div class="detail-value">${JSON.stringify(crypto.chacha20_poly1305.decrypted, null, 2)}</div>
+                    </div>
+                </div>
+
+                <div class="decode-section">
+                    <div class="decode-title">🔓 Decryption Verification</div>
+                    <p style="margin-bottom: 10px; color: #666; font-size: 0.9em;">
+                        Click below to verify that the encrypted data can be successfully decrypted back to the original transaction details.
+                    </p>
+                    <button class="decode-button" onclick="showDecodeProof()">Verify Decryption Process</button>
+                    <div id="decodeResult" class="decode-result"></div>
+                </div>
+            `;
+        }
+
+        function showDecodeProof() {
+            const resultDiv = document.getElementById('decodeResult');
+            const button = event.target;
+            
+            if (resultDiv.classList.contains('active')) {
+                resultDiv.classList.remove('active');
+                button.textContent = 'Verify Decryption Process';
+                return;
+            }
+
+            // Get the stored transaction data from the last payment
+            const cryptoSections = document.querySelectorAll('.crypto-detail');
+            let plaintext = '';
+            let decrypted = '';
+            
+            cryptoSections.forEach(detail => {
+                const label = detail.querySelector('.detail-label');
+                if (label && label.textContent.includes('Plaintext')) {
+                    plaintext = detail.querySelector('.detail-value').textContent;
+                }
+                if (label && label.textContent.includes('Decrypted Data')) {
+                    decrypted = detail.querySelector('.detail-value').textContent;
+                }
+            });
+
+            resultDiv.innerHTML = `
+                <strong>Step 1: Original Transaction Data (Before Encryption)</strong>
+                <div style="background: #f9f9f9; padding: 8px; margin: 8px 0; border-left: 3px solid #4caf50;">
+                    ${plaintext}
+                </div>
+                
+                <strong>Step 2: Data was encrypted using ChaCha20-Poly1305</strong>
+                <div style="background: #f9f9f9; padding: 8px; margin: 8px 0; border-left: 3px solid #ff9800;">
+                    Ciphertext: [encrypted binary data - see above]
+                </div>
+                
+                <strong>Step 3: Data successfully decrypted back to original</strong>
+                <div style="background: #f9f9f9; padding: 8px; margin: 8px 0; border-left: 3px solid #4caf50;">
+                    ${decrypted}
+                </div>
+                
+                <div style="margin-top: 12px; padding: 10px; background: #e8f5e9; border-radius: 4px; color: #2e7d32;">
+                    ✅ <strong>Verification Successful!</strong><br>
+                    Original plaintext matches decrypted data, confirming the encryption/decryption process works correctly.
+                </div>
+            `;
+            
+            resultDiv.classList.add('active');
+            button.textContent = 'Hide Verification';
+        }
+    </script>
+</body>
+</html>
