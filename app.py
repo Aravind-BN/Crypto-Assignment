@@ -7,80 +7,45 @@ import json
 from datetime import datetime
 import hashlib
 
-# Try to import Kyber from different sources
-USING_REAL_KYBER = False
+# Educational CRYSTALS-Kyber simulation for demonstration
+print("Using Educational Kyber Simulation for CTG Assignment")
 
-try:
-    # Try oqs (Open Quantum Safe) - more reliable
-    import oqs
-    USING_REAL_KYBER = True
-    print("✓ Using real CRYSTALS-Kyber from liboqs")
+class KyberSimulation:
+    """
+    Educational CRYSTALS-Kyber simulation for demonstration.
+    Shows the correct flow and uses proper key/ciphertext sizes.
     
-    class KyberWrapper:
-        @staticmethod
-        def keypair():
-            kem = oqs.KeyEncapsulation("Kyber512")
-            public_key = kem.generate_keypair()
-            secret_key = kem.export_secret_key()
-            return public_key, secret_key
-        
-        @staticmethod
-        def enc(public_key):
-            kem = oqs.KeyEncapsulation("Kyber512")
-            ciphertext, shared_secret = kem.encap_secret(public_key)
-            return ciphertext, shared_secret
-        
-        @staticmethod
-        def dec(ciphertext, secret_key):
-            kem = oqs.KeyEncapsulation("Kyber512", secret_key=secret_key)
-            shared_secret = kem.decap_secret(ciphertext)
-            return shared_secret
+    Note: This is for educational purposes to demonstrate cryptographic concepts.
+    """
     
-    kyber = KyberWrapper()
+    @staticmethod
+    def keypair():
+        """Generate Kyber-512 keypair (correct sizes)"""
+        secret_key = os.urandom(1632)  # Kyber-512 secret key size
+        # Public key derived from secret (simplified)
+        public_key = hashlib.sha3_512(secret_key).digest() + os.urandom(736)  # 800 bytes total
+        return public_key, secret_key
     
-except ImportError:
-    print("⚠ liboqs not found, using educational Kyber simulation")
-    print("  (Install with: pip uninstall pqcrypto && pip install liboqs-python)")
+    @staticmethod
+    def enc(public_key):
+        """Encapsulate shared secret (Kyber-512 sizes)"""
+        # Generate random 32-byte shared secret
+        shared_secret = os.urandom(32)
+        # Create ciphertext (768 bytes for Kyber-512)
+        # In real Kyber: ciphertext contains encrypted message
+        ciphertext_data = hashlib.sha3_256(public_key + shared_secret).digest()
+        ciphertext = ciphertext_data + os.urandom(768 - len(ciphertext_data))
+        return ciphertext, shared_secret
     
-    # Educational simulation that demonstrates Kyber concepts
-    class KyberSimulation:
-        """
-        Educational CRYSTALS-Kyber simulation for demonstration.
-        Shows the correct flow and uses proper key/ciphertext sizes.
-        
-        Note: This is for educational purposes. For production, use:
-        - liboqs-python (recommended)
-        - pqcrypto (if properly compiled)
-        """
-        
-        @staticmethod
-        def keypair():
-            """Generate Kyber-512 keypair (correct sizes)"""
-            secret_key = os.urandom(1632)  # Kyber-512 secret key size
-            # Public key derived from secret (simplified)
-            public_key = hashlib.sha3_512(secret_key).digest() + os.urandom(736)  # 800 bytes total
-            return public_key, secret_key
-        
-        @staticmethod
-        def enc(public_key):
-            """Encapsulate shared secret (Kyber-512 sizes)"""
-            # Generate random 32-byte shared secret
-            shared_secret = os.urandom(32)
-            # Create ciphertext (768 bytes for Kyber-512)
-            # In real Kyber: ciphertext contains encrypted message
-            ciphertext_data = hashlib.sha3_256(public_key + shared_secret).digest()
-            ciphertext = ciphertext_data + os.urandom(768 - len(ciphertext_data))
-            return ciphertext, shared_secret
-        
-        @staticmethod
-        def dec(ciphertext, secret_key):
-            """Decapsulate shared secret"""
-            # Derive shared secret from ciphertext and secret key
-            # In real Kyber: polynomial operations recover the secret
-            shared_secret = hashlib.sha3_256(secret_key[:32] + ciphertext[:32]).digest()
-            return shared_secret
-    
-    kyber = KyberSimulation()
+    @staticmethod
+    def dec(ciphertext, secret_key):
+        """Decapsulate shared secret"""
+        # Derive shared secret from ciphertext and secret key
+        # In real Kyber: polynomial operations recover the secret
+        shared_secret = hashlib.sha3_256(secret_key[:32] + ciphertext[:32]).digest()
+        return shared_secret
+
+kyber = KyberSimulation()
 
 app = Flask(__name__)
 
@@ -148,7 +113,7 @@ def process_payment():
             'cryptography': {
                 'kyber': {
                     'description': 'Post-Quantum Key Encapsulation Mechanism',
-                    'implementation': 'Real Kyber (liboqs)' if USING_REAL_KYBER else 'Educational Simulation',
+                    'implementation': 'Educational Simulation',
                     'purpose': 'Establishes shared secret between device and merchant',
                     'ciphertext_length': len(kyber_ciphertext),
                     'shared_secret_length': len(shared_secret_alice),
