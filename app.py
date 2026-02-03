@@ -7,55 +7,46 @@ import json
 from datetime import datetime
 import hashlib
 
-# Educational CRYSTALS-Kyber simulation for demonstration
-print("Using Educational Kyber Simulation for CTG Assignment")
-
+# Educational CRYSTALS-Kyber simulation for assignment purposes
 class KyberSimulation:
-    """
-    Educational CRYSTALS-Kyber simulation for demonstration.
-    Shows the correct flow and uses proper key/ciphertext sizes.
-    
-    Note: This is for educational purposes to demonstrate cryptographic concepts.
-    """
-    
     @staticmethod
+    # STEP 1: Key Generation
     def keypair():
-        """Generate Kyber-512 keypair (correct sizes)"""
         secret_key = os.urandom(1632)  # Kyber-512 secret key size
-        # Public key derived from secret (simplified)
+        # Public key derived from secret (simplified version for demonstration)
         public_key = hashlib.sha3_512(secret_key).digest() + os.urandom(736)  # 800 bytes total
         return public_key, secret_key
     
     @staticmethod
+    #Step 2: Encryption/ Encapsulation of public say -> shared_secret_A
     def enc(public_key):
-        """Encapsulate shared secret (Kyber-512 sizes)"""
         # Generate random 32-byte shared secret
         shared_secret = os.urandom(32)
         # Create ciphertext (768 bytes for Kyber-512)
-        # In real Kyber: ciphertext contains encrypted message
+        # Embed the shared secret in the ciphertext so it can be recovered
         ciphertext_data = hashlib.sha3_256(public_key + shared_secret).digest()
-        ciphertext = ciphertext_data + os.urandom(768 - len(ciphertext_data))
+        # First 32 bytes of ciphertext contain info to recover shared secret
+        ciphertext = shared_secret + os.urandom(768 - 32)
         return ciphertext, shared_secret
     
     @staticmethod
+    # Step 3: Decryption/ Decapsultation of ciphertext + secret_key -> shared_secret_B
     def dec(ciphertext, secret_key):
-        """Decapsulate shared secret"""
-        # Derive shared secret from ciphertext and secret key
-        # In real Kyber: polynomial operations recover the secret
-        shared_secret = hashlib.sha3_256(secret_key[:32] + ciphertext[:32]).digest()
+        # Extract the shared secret from ciphertext (first 32 bytes)
+        shared_secret = ciphertext[:32]
         return shared_secret
 
 kyber = KyberSimulation()
 
 app = Flask(__name__)
 
-# Simulate stored keys (in real Apple Pay, these would be in Secure Element)
+# Simulate stored keys (in real Apple Pay, these would be in Secure Element and wouldn't be revealed easily)
 MERCHANT_KYBER_KEYS = {}
 DEVICE_KEYS = {}
 
+# Initializing DUMMY keys for demonstration
 def initialize_keys():
-    """Initialize cryptographic keys for demonstration"""
-    # Generate Kyber keypair for key establishment
+    # Generate dummy Kyber keypair for key establishment
     public_key, secret_key = kyber.keypair()
     MERCHANT_KYBER_KEYS['public'] = public_key
     MERCHANT_KYBER_KEYS['secret'] = secret_key
@@ -77,7 +68,7 @@ def process_payment():
         merchant = data.get('merchant', 'Unknown Merchant')
         card_last4 = data.get('card_last4', '****')
         
-        # Create transaction data
+        # Creation of Transaction Data (to be encrypted)
         transaction_data = {
             'amount': amount,
             'merchant': merchant,
@@ -89,33 +80,40 @@ def process_payment():
         plaintext = json.dumps(transaction_data).encode('utf-8')
         
         # Step 1: CRYSTALS-Kyber - Establish shared secret (simulates secure key exchange)
-        # In real Apple Pay, this would be used to establish a secure session with the payment terminal
         kyber_ciphertext, shared_secret_alice = kyber.enc(MERCHANT_KYBER_KEYS['public'])
         shared_secret_bob = kyber.dec(kyber_ciphertext, MERCHANT_KYBER_KEYS['secret'])
         
-        # Verify both parties have the same shared secret
+        # Check whether both shared secrets match 
         kyber_verification = shared_secret_alice == shared_secret_bob
         
         # Step 2: ChaCha20-Poly1305 - Encrypt actual payment data
         # Uses the symmetric key to encrypt transaction details
         chacha = ChaCha20Poly1305(DEVICE_KEYS['chacha_key'])
-        nonce = os.urandom(12)
+        nonce = os.urandom(12) # 96-bit nonce for ChaCha20-Poly1305, will be regenerated every transaction for security
         encrypted_payment = chacha.encrypt(nonce, plaintext, None)
         
-        # Decrypt to verify (simulates merchant receiving and decrypting)
+        # Decryption
         decrypted_payment = chacha.decrypt(nonce, encrypted_payment, None)
         decrypted_data = json.loads(decrypted_payment.decode('utf-8'))
         
-        # Prepare response with detailed cryptographic information
+        # Responses for viewing in the app
         response = {
             'success': True,
             'transaction': transaction_data,
+            'keys': {
+                'kyber_public_key': MERCHANT_KYBER_KEYS['public'].hex(),
+                'kyber_secret_key': MERCHANT_KYBER_KEYS['secret'].hex(),
+                'chacha_key': DEVICE_KEYS['chacha_key'].hex()
+            },
             'cryptography': {
                 'kyber': {
                     'description': 'Post-Quantum Key Encapsulation Mechanism',
                     'implementation': 'Educational Simulation',
                     'purpose': 'Establishes shared secret between device and merchant',
                     'ciphertext_length': len(kyber_ciphertext),
+                    'ciphertext_full': kyber_ciphertext.hex(),
+                    'shared_secret_alice': shared_secret_alice.hex(),
+                    'shared_secret_bob': shared_secret_bob.hex(),
                     'shared_secret_length': len(shared_secret_alice),
                     'verification': 'Shared secrets match' if kyber_verification else 'Mismatch',
                     'ciphertext_preview': kyber_ciphertext[:32].hex() + '...',
@@ -126,6 +124,7 @@ def process_payment():
                     'purpose': 'Encrypts transaction data with authentication',
                     'plaintext': plaintext.decode('utf-8'),
                     'ciphertext_length': len(encrypted_payment),
+                    'ciphertext_full': encrypted_payment.hex(),
                     'nonce': nonce.hex(),
                     'ciphertext_preview': encrypted_payment[:32].hex() + '...',
                     'decrypted': decrypted_data,
@@ -143,8 +142,9 @@ def process_payment():
         }), 500
 
 @app.route("/api/key-info", methods=["GET"])
+
+# Key Information Reveal
 def get_key_info():
-    """Endpoint to display key information for educational purposes"""
     return jsonify({
         'kyber': {
             'algorithm': 'CRYSTALS-Kyber-512',

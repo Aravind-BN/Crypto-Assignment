@@ -463,6 +463,38 @@
                     </div>
                 </div>
 
+                <h3 style="margin: 25px 0 15px 0; color: #333; font-size: 1.2em;">🔑 Cryptographic Keys (Educational Display)</h3>
+
+                <div class="crypto-section">
+                    <div class="crypto-title">
+                        <span>Keys Used in This Transaction</span>
+                        <span class="badge">Educational</span>
+                    </div>
+                    
+                    <div class="crypto-detail">
+                        <div class="detail-label">⚠️ Security Note</div>
+                        <div class="detail-value" style="background: #fff3cd; color: #856404;">
+                            In a real Apple Pay system, these keys would NEVER be displayed or accessible. 
+                            They are shown here for educational purposes only to demonstrate the cryptographic process.
+                        </div>
+                    </div>
+
+                    <div class="crypto-detail">
+                        <div class="detail-label">Kyber Public Key (800 bytes)</div>
+                        <div class="detail-value" style="max-height: 100px; overflow-y: auto;">${data.keys.kyber_public_key}</div>
+                    </div>
+
+                    <div class="crypto-detail">
+                        <div class="detail-label">Kyber Secret Key (1632 bytes)</div>
+                        <div class="detail-value" style="max-height: 100px; overflow-y: auto;">${data.keys.kyber_secret_key}</div>
+                    </div>
+
+                    <div class="crypto-detail">
+                        <div class="detail-label">ChaCha20-Poly1305 Symmetric Key (32 bytes / 256 bits)</div>
+                        <div class="detail-value">${data.keys.chacha_key}</div>
+                    </div>
+                </div>
+
                 <h3 style="margin: 25px 0 15px 0; color: #333; font-size: 1.2em;">Cryptographic Process (Step-by-Step)</h3>
 
                 <div class="crypto-section">
@@ -484,9 +516,10 @@
                     <div class="crypto-detail">
                         <div class="detail-label">What Happened</div>
                         <div class="detail-value">
-                            1. Device generates Kyber ciphertext using merchant's public key<br>
-                            2. Both device and merchant derive the same shared secret<br>
-                            3. This shared secret will be used for secure communication
+                            1. Device uses merchant's public key to encapsulate a shared secret<br>
+                            2. Creates Kyber ciphertext that only merchant can decrypt<br>
+                            3. Both device and merchant derive identical shared secrets<br>
+                            4. This establishes secure communication channel
                         </div>
                     </div>
 
@@ -502,13 +535,18 @@
                     </div>
 
                     <div class="crypto-detail">
-                        <div class="detail-label">Kyber Ciphertext (First 32 bytes)</div>
-                        <div class="detail-value">${crypto.kyber.ciphertext_preview}</div>
+                        <div class="detail-label">Full Kyber Ciphertext (768 bytes)</div>
+                        <div class="detail-value" style="max-height: 100px; overflow-y: auto;">${crypto.kyber.ciphertext_full}</div>
                     </div>
 
                     <div class="crypto-detail">
-                        <div class="detail-label">Shared Secret (First 16 bytes)</div>
-                        <div class="detail-value">${crypto.kyber.shared_secret_preview}</div>
+                        <div class="detail-label">Shared Secret (Device Side)</div>
+                        <div class="detail-value">${crypto.kyber.shared_secret_alice}</div>
+                    </div>
+
+                    <div class="crypto-detail">
+                        <div class="detail-label">Shared Secret (Terminal Side)</div>
+                        <div class="detail-value">${crypto.kyber.shared_secret_bob}</div>
                     </div>
 
                     <div class="crypto-detail">
@@ -566,8 +604,8 @@
                     </div>
 
                     <div class="crypto-detail">
-                        <div class="detail-label">Encrypted Ciphertext (First 32 bytes)</div>
-                        <div class="detail-value">${crypto.chacha20_poly1305.ciphertext_preview}</div>
+                        <div class="detail-label">Full Encrypted Ciphertext (with Authentication Tag)</div>
+                        <div class="detail-value" style="max-height: 100px; overflow-y: auto;">${crypto.chacha20_poly1305.ciphertext_full}</div>
                     </div>
 
                     <div class="crypto-detail">
