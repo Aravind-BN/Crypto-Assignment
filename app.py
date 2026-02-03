@@ -23,8 +23,6 @@ class KyberSimulation:
         # Generate random 32-byte shared secret
         shared_secret = os.urandom(32)
         # Create ciphertext (768 bytes for Kyber-512)
-        # Embed the shared secret in the ciphertext so it can be recovered
-        ciphertext_data = hashlib.sha3_256(public_key + shared_secret).digest()
         # First 32 bytes of ciphertext contain info to recover shared secret
         ciphertext = shared_secret + os.urandom(768 - 32)
         return ciphertext, shared_secret
